@@ -1,21 +1,3 @@
-//fn search(
-//    word: &str,
-//    words_mat: &[Vec<Option<String>>],
-//) -> Vec<Vec<Option<String>>> {
-//    words_mat
-//        .iter()
-//        .filter(|words|{
-//            words
-//                .iter()
-//                .flatten()
-//                .filter(|cmp|cmp==&word)
-//                .next()
-//                .is_some()
-//        })
-//        .cloned()
-//        .collect()
-//}
-
 // search = xword
 // table = yword
 
@@ -23,17 +5,17 @@ use infag::*;
 fn main() {
     let table = fake_table();
 
-    let x = table.compare("Vec<T> -> Option<T>", 2);
+    let x: Vec<_> = table.compare("first", 2);
     println!("{x:?}");
 }
 
-fn fake_table() -> Table<String> {
+fn fake_table() -> Table {
     let src_max = std::env::var("LEVSMAX")
         .map(|a| a.parse().ok())
         .ok()
         .flatten()
         .unwrap_or(30);
-    Table::<String>::new(
+    Table::new(
         src_max,
         2,
         vec![

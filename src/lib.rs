@@ -60,14 +60,14 @@ impl Lev {
 }
 
 #[derive(Debug)]
-pub struct Table<T> {
+pub struct Table {
     pub col_count: usize,
-    content: Vec<Vec<T>>,
-    compare: Lev,
+    content: Vec<Vec<String>>,
+    lev_matrix: Lev,
 }
 
-impl<T> Table<T> {
-    pub fn new(max_search: usize, col_count: usize, content: Vec<Vec<T>>) -> Option<Table<T>> {
+impl Table {
+    pub fn new(max_search: usize, col_count: usize, content: Vec<Vec<String>>) -> Option<Table> {
         if content
             .iter()
             .map(Vec::len)
@@ -77,13 +77,41 @@ impl<T> Table<T> {
         {
             return None;
         }
+        let max_yword = content
+            .iter()
+            .map(|row| row.iter().map(|a| a.len()).max())
+            .max()
+            .flatten()
+            .unwrap_or(0);
         Some(Table {
             col_count,
             content,
-            compare: Lev::new(max_search, col_count + 1),
+            lev_matrix: Lev::new(max_search, max_yword + 2),
         })
     }
-    pub fn compare(&self, against: &str, take: i32) -> Vec<(i32, Vec<T>)> {
-        todo!()
+    pub fn compare(
+        &self,
+        search: &str,
+        take: usize,
+    ) -> Vec<(&[String], i32)> {
+        let mut a = self
+            .content
+            .iter()
+            .map(|row| {
+                (
+                    row.as_slice(),
+                    row
+                    .iter()
+                    .map(|cmp| self.lev_matrix.compare(search, cmp))
+                    .map(Result::ok)
+                    .flatten()
+                    .min()
+                    .unwrap_or(999)
+                )
+            })
+            .take(take)
+            .collect::<Vec<_>>();
+        a.sort_by_key(|(_, lev)|*lev);
+        a
     }
 }

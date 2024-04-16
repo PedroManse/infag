@@ -1,0 +1,51 @@
+body {
+	color: #FFF;
+	background-color: #111;
+}
+
+pre {
+	color: white;
+}
+
+a,a:visited {
+	color: #555;
+}
+b.lastscope {
+	color: #F0979C;
+}
+b.scope {
+	color: white;
+}
+b.fn {
+	color: #339BBF
+}
+
+form {
+	text-align: center;
+	input#search {
+		margin: auto;
+		width: 50%;
+	}
+	input#take {
+		float: right;
+		width: 50px;
+	}
+}
+
+table {
+	min-width: 90%;
+	margin-left: 5%;
+	margin-right: 5%;
+	margin-bottom: 5px;
+	border-collapse: collapse;
+	letter-spacing: 1px;
+	font-size: 0.8rem;
+
+	td {
+		text-align: left;
+		border-left: 1px solid #666;
+		border-right: 1px solid #666;
+		border-bottom: 1px solid #222;
+		padding: 2px;
+	}
+}

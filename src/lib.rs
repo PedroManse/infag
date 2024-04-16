@@ -97,10 +97,9 @@ impl Table {
                         .unwrap_or(999),
                 )
             })
-            .take(take)
             .collect::<Vec<_>>();
         a.sort_by_key(|(_, lev)| *lev);
-        a
+        a.into_iter().take(take).collect()
     }
 }
 

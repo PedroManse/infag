@@ -1,5 +1,6 @@
-use maud::{Render, html, DOCTYPE};
+use maud::{html, Render, DOCTYPE};
 use poem::{
+    endpoint::StaticFilesEndpoint,
     get, handler,
     listener::TcpListener,
     middleware::AddData,
@@ -20,41 +21,35 @@ fn index() -> Html<String> {
     Html(
         html! { (DOCTYPE) html {
             head {
+                link rel="stylesheet" href="/files/css/style.css" {}
                 script src="https://unpkg.com/htmx.org@1.9.11"{}
-                style { """
-table {
-	min-width: 90%;
-	margin-left: 5%;
-	margin-right: 5%;
-	margin-bottom: 5px;
-	border-collapse: collapse;
-	letter-spacing: 1px;
-	font-size: 0.8rem;
-
-	td {
-		text-align: left;
-		border-left: 1px solid #666;
-		border-right: 1px solid #666;
-		border-bottom: 1px solid #222;
-		padding: 2px;
-	}
-
-                """ }
             }
             body {
-                input
-                    type="text"
+               form
                     hx-get="/query"
-                    hx-trigger="change"
                     hx-swap="innerHTML"
                     hx-target="#tbody"
-                    name="search"
-                    { }
+                    hx-include="#search, #take"
+                    hx-trigger="load, keyup change delay:0.2s, change"
+                {
+                    input
+                        type="text"
+                        name="search"
+                        id="search"
+                        { }
+                    input
+                        type="number"
+                        name="take"
+                        value="5"
+                        id="take"
+                        { }
+                }
                 table{
                     thead {
                         tr{
                             th{"name"}
                             th{"signature"}
+                            th{"rustdoc"}
                         }
                     }
                     tbody id="tbody" {}
@@ -71,8 +66,9 @@ fn search(
     state: Data<&Arc<Table>>,
 ) -> Html<String> {
     let take = take.unwrap_or(5);
+    let search = format!("<pre>{}</pre>", html_escape::encode_text(&search));
     let rows: Rows<'_> = state.compare(&search, take).into();
-    Html( rows.render().into() )
+    Html(rows.render().into())
 }
 
 use infag::*;
@@ -82,6 +78,10 @@ async fn main() -> Result<(), std::io::Error> {
     let app = Route::new()
         .at("/", get(index))
         .at("/query", get(search))
+        .nest(
+            "/files",
+            StaticFilesEndpoint::new("./files").show_files_listing(),
+        )
         .with(AddData::new(Arc::new(state)));
 
     Server::new(TcpListener::bind("0.0.0.0:8000"))
@@ -95,16 +95,54 @@ async fn fake_table() -> Table {
         .map(|a| a.parse().ok())
         .ok()
         .flatten()
-        .unwrap_or(30);
+        .unwrap_or(80);
     Table::new(
         src_max,
-        2,
+        3,
         vec![
-            vec!["<a href=\"https://doc.rust-lang.org/std/vec/struct.Vec.html#method.pop\">pop</a>",  "Vec&lt;T&gt; -> Option&lt;T&gt;"],
-            vec!["<a href=\"https://example.com\">find</a>",  "Vec&lt;T&gt;,Fn(T)->bool -> Option&lt;T&gt;"],
-            vec!["<a href=\"https://example.com\">first</a>", "Vec&lt;T&gt; -> Option&lt;T&gt;"            ],
-            vec!["<a href=\"https://example.com\">take</a>",  "Option&lt;T&gt; -> Option&lt;T&gt;"         ],
-            vec!["<a href=\"https://example.com\">ok_or</a>", "Option&lt;T&gt;, E -> Result&lt;T, E&gt;"   ],
+            vec![
+                "<b class=\"fn\">pop</b>",
+                "<pre>Vec&lt;T&gt; -&gt; Option&lt;T&gt;</pre>",
+                "<a href=\"https://doc.rust-lang.org/std/vec/struct.Vec.html#method.pop\">
+                <b class=\"scope\">std</b>::\
+                <b class=\"scope\">vec</b>::\
+                <b class=\"lastscope\">Vec</b>.\
+                <b class=\"fn\">pop</b></a>",
+            ],
+            vec![
+                "<b class=\"fn\">find</b>",
+                "<pre>Iterator&lt;Item=T&gt;,Fn(T)-&gt;bool -&gt; Option&lt;T&gt;</pre>",
+                "<a href=\"https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.find\">
+                    <b class=\"scope\">std</b>::\
+                    <b class=\"scope\">iter</b>::\
+                    <b class=\"lastscope\">Iterator</b>.\
+                    <b class=\"fn\">find</b></a>",
+            ],
+            vec![
+                "<b class=\"fn\">first</b>",
+                "<pre>Vec&lt;T&gt; -> Option&lt;T&gt;</pre>",
+                "<a href=\"https://doc.rust-lang.org/std/primitive.slice.html#method.first\">
+                <b class=\"lastscope\">slice</b>.\
+                <b class=\"fn\">first</b></a>",
+            ],
+            vec![
+                "<b class=\"fn\">take</b>",
+                "<pre>Option&lt;T&gt; -> Option&lt;T&gt;</pre>",
+                "<a href=\"https://doc.rust-lang.org/std/option/enum.Option.html#method.take\">
+                <b class=\"scope\">std</b>::\
+                <b class=\"scope\">option</b>::\
+                <b class=\"lastscope\">Option</b>.\
+                <b class=\"fn\">take</b></a>",
+            ],
+            vec![
+                "<b class=\"fn\">ok_or</b>",
+                "<pre>Option&lt;T&gt;, E -> Result&lt;T, E&gt;</pre>",
+                "<a href=\"https://doc.rust-lang.org/std/option/enum.Option.html#method.ok_or\">
+                    <b class=\"scope\">std</b>::\
+                    <b class=\"scope\">option</b>::\
+                    <b class=\"lastscope\">Option</b>.\
+                    <b class=\"fn\">ok_or</b></a>",
+            ],
         ]
         .into_iter()
         .map(|fnc| fnc.into_iter().map(String::from).collect())
@@ -112,3 +150,13 @@ async fn fake_table() -> Table {
     )
     .expect("manual dev table")
 }
+
+/*
+<b class="fn">{name}</b>
+<pre>{signature}</pre>
+<a href="...">
+[<b class="scope">{scope[0..len-1]}</b>]
+<b class="lastscope">{scope[len-1]}</b>
+<b class="fn">{name}</b>
+</a>
+*/
